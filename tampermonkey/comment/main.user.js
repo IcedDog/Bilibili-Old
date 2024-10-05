@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bilibili 翻页评论区
 // @namespace    MotooriKashin
-// @version      2.2.7
+// @version      2.2.9
 // @description  恢复评论区翻页功能。
 // @author       MotooriKashin
 // @homepage     https://github.com/MotooriKashin/Bilibili-Old
@@ -839,7 +839,7 @@ var PreviewImage = class extends HTMLElement {
     document.body.style.overflow = "hidden";
   }
 };
-customElements.get(`preview-image-${"81g6kk2st1y"}`) || customElements.define(`preview-image-${"81g6kk2st1y"}`, PreviewImage);
+customElements.get(`preview-image-${"f6jo3gkpoyp"}`) || customElements.define(`preview-image-${"f6jo3gkpoyp"}`, PreviewImage);
 
 // src/core/comment.ts
 var Feedback;
@@ -860,12 +860,12 @@ var Comment = class _Comment {
     events = {};
     this.bbComment();
     this.initComment();
+    this.BiliComments();
     this.pageCount();
     this.jump();
   }
   /** 捕获评论组件 */
   bbComment() {
-    const that = this;
     Reflect.defineProperty(window, "bbComment", {
       configurable: true,
       set: (v) => {
@@ -933,6 +933,53 @@ var Comment = class _Comment {
           loading = true;
           setTimeout(() => window.initComment(...arguments), 100);
           return commentHander;
+        };
+      }
+    });
+  }
+  BiliComments() {
+    Reflect.defineProperty(self, "BiliComments", {
+      configurable: true,
+      set: (v) => true,
+      get: () => {
+        return class extends EventTarget {
+          constructor(arg) {
+            super();
+            this.arg = arg;
+          }
+          $parent;
+          mount(parent) {
+            if (load) {
+              this.$parent = parent;
+              const [type, oid] = this.arg.params.split(",");
+              new Feedback(parent, oid, type, void 0, this.arg.seekId);
+              setTimeout(() => {
+                this.dispatchEvent(new Event("inited"));
+                this.dispatchEvent(new Event("expand"));
+              });
+            } else {
+              if (!loading) {
+                loadScript(`//s1.hdslb.com/bfs/seed/jinkela/commentpc/comment.min.js`).then(() => {
+                  load = true;
+                });
+              }
+              loading = true;
+              setTimeout(() => this.mount(parent), 100);
+            }
+            return this;
+          }
+          dispatchAction({ type, args, callback }) {
+            var _a;
+            switch (type) {
+              case "reload": {
+                const [type2, oid] = args[0].params.split(",");
+                (_a = this.$parent) == null ? void 0 : _a.replaceChildren();
+                new Feedback(this.$parent, oid, type2, void 0, this.arg.seekId);
+                callback == null ? void 0 : callback();
+                break;
+              }
+            }
+          }
         };
       }
     });
